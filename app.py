@@ -22,6 +22,16 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "DATA"
 
 
+def get_openai_api_key() -> str | None:
+    """Cloud Secrets 또는 로컬 .env에서 OpenAI API 키를 가져옵니다."""
+    try:
+        # Streamlit Cloud의 Secrets에 저장한 값을 가장 먼저 사용합니다.
+        return st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    except FileNotFoundError:
+        # 로컬에서 secrets.toml이 없을 때는 .env만 확인합니다.
+        return os.getenv("OPENAI_API_KEY")
+
+
 @st.cache_resource(show_spinner="PDF 문서를 읽고 검색 색인을 만드는 중입니다...")
 def build_retriever():
     """DATA의 모든 PDF를 읽어 메모리 벡터 검색기로 만듭니다."""
@@ -130,8 +140,10 @@ def main() -> None:
     st.title("📚 공무원 여비 RAG 챗봇")
     st.write("DATA 폴더의 문서만 검색해 답변합니다.")
 
-    if not os.getenv("OPENAI_API_KEY"):
-        st.error(".env 파일에 OPENAI_API_KEY를 입력한 뒤 다시 실행해 주세요.")
+    if not get_openai_api_key():
+        st.error(
+            "로컬 .env 또는 Streamlit Cloud Secrets에 OPENAI_API_KEY를 설정해 주세요."
+        )
         st.stop()
 
     try:
